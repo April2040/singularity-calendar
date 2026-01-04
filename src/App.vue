@@ -6,15 +6,38 @@ import NarrativeCard from '@/components/display/NarrativeCard.vue'
 import HistoryBenchmark from '@/components/display/HistoryBenchmark.vue'
 import MicroAction from '@/components/display/MicroAction.vue'
 import MistLayer from '@/components/interaction/MistLayer.vue'
-import { todayData } from '@/data/calendarData'
+import { dataManager } from '@/services/dataManager'
 
 // 状态管理
 const stage = ref('loading')  // loading -> mist -> content
 const mistLayerRef = ref(null)
 
+// 初始化数据加载
+async function initializeData() {
+  try {
+    // 并行加载今日数据和历史对标
+    await Promise.all([
+      dataManager.loadTodayData(),
+      dataManager.loadHistoryBenchmark()
+    ])
+    
+    // 数据加载完成后进入迷雾阶段
+    if (dataManager.hasData.value) {
+      stage.value = 'mist'
+    } else {
+      // 如果数据加载失败，直接显示错误状态
+      stage.value = 'error'
+    }
+  } catch (err) {
+    console.error('数据初始化失败:', err)
+    stage.value = 'error'
+  }
+}
+
 // 墨滴加载完成
 function handleLoadingComplete() {
-  stage.value = 'mist'
+  // 开始加载数据
+  initializeData()
 }
 
 // 迷雾拨开完成
@@ -28,6 +51,44 @@ function handleReset() {
   if (mistLayerRef.value) {
     mistLayerRef.value.reset()
   }
+}
+
+// 重新加载数据
+async function handleRetry() {
+  stage.value = 'loading'
+  await dataManager.refreshAll()
+  stage.value = 'mist'
+}
+
+// 获取当前日期（用于显示）
+function getCurrentDate() {
+  if (dataManager.todayData.value) {
+    return dataManager.todayData.value.date
+  }
+  // 回退到当前日期
+  const now = new Date()
+  return {
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+    day: now.getDate(),
+    lunar: '未知',
+    zodiac: '未知'
+  }
+}
+
+// 获取叙事数据
+function getNarrative() {
+  return dataManager.todayData.value?.narrative || null
+}
+
+// 获取历史对标数据
+function getHistoryBenchmark() {
+  return dataManager.historyBenchmark.value || dataManager.todayData.value?.historyBenchmark || null
+}
+
+// 获取微行动数据
+function getMicroAction() {
+  return dataManager.todayData.value?.microAction || null
 }
 </script>
 
@@ -47,8 +108,29 @@ function handleReset() {
             <div class="absolute inset-4 bg-ink-primary rounded-full"></div>
           </div>
           <p class="mt-6 text-ink-secondary font-serif text-lg tracking-widest animate-pulse">
-            研墨...
+            {{ dataManager.isLoading.value ? '汲取智慧...' : '研墨...' }}
           </p>
+        </div>
+      </div>
+    </Transition>
+    
+    <!-- 错误状态 -->
+    <Transition name="mist-appear">
+      <div 
+        v-if="stage === 'error'" 
+        class="fixed inset-0 flex items-center justify-center z-50 bg-paper-200"
+      >
+        <div class="text-center px-8">
+          <div class="text-ink-tertiary text-6xl mb-4">⚠</div>
+          <p class="text-ink-secondary font-serif text-lg mb-6">
+            {{ dataManager.error.value || '数据加载失败' }}
+          </p>
+          <button 
+            @click="handleRetry"
+            class="px-6 py-2 bg-ink-primary text-paper-100 rounded-lg font-serif hover:bg-ink-secondary transition-colors"
+          >
+            重新尝试
+          </button>
         </div>
       </div>
     </Transition>
@@ -69,7 +151,7 @@ function handleReset() {
         
         <!-- 背景透出的内容（模糊状态） -->
         <div class="absolute inset-0 pointer-events-none opacity-30 blur-[2px]">
-          <DateHeader :date="todayData.date" />
+          <DateHeader :date="getCurrentDate()" />
         </div>
       </div>
     </Transition>
@@ -81,25 +163,28 @@ function handleReset() {
         class="relative z-10 min-h-screen flex flex-col"
       >
         <!-- 日期头部 -->
-        <DateHeader :date="todayData.date" />
+        <DateHeader :date="getCurrentDate()" />
         
         <!-- 滚动内容区域 -->
         <div class="flex-1 px-5 pb-8 space-y-6">
           <!-- AI叙事卡片 -->
           <NarrativeCard 
-            :narrative="todayData.narrative"
+            v-if="getNarrative()"
+            :narrative="getNarrative()"
             class="animate-fade-in-up"
           />
           
           <!-- 历史对标 -->
           <HistoryBenchmark 
-            :benchmark="todayData.historyBenchmark"
+            v-if="getHistoryBenchmark()"
+            :benchmark="getHistoryBenchmark()"
             class="animate-fade-in-up animation-delay-200"
           />
           
           <!-- 底部微行动 -->
           <MicroAction 
-            :action="todayData.microAction"
+            v-if="getMicroAction()"
+            :action="getMicroAction()"
             class="animate-fade-in-up animation-delay-400"
           />
           
