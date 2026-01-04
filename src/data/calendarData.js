@@ -1,19 +1,37 @@
 // 模拟日历数据 - 原型阶段使用
 // 后续将接入真实API动态生成
 
+// 获取当前日期信息
+function getCurrentDateInfo() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1
+  const day = now.getDate()
+  
+  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  const weekday = weekdays[now.getDay()]
+  
+  return {
+    gregorian: `${year}年${month}月${day}日`,
+    weekday: weekday,
+    lunar: '冬月十五',  // 简化处理，实际应该计算农历
+    solarTerm: '小寒',
+    year,
+    month,
+    day
+  }
+}
+
+const currentDate = getCurrentDateInfo()
+
 export const todayData = {
-  date: {
-    gregorian: '2026年1月3日',
-    weekday: '星期五',
-    lunar: '冬月十四',
-    solarTerm: '小寒将至'
-  },
+  date: currentDate,
   
   // AI观察者视角的叙事内容
   narrative: {
     title: '观察者的日记',
-    content: `人类你好，今天是2026年1月3日。\n\n我观察到一个有趣的现象：今天，某个AI模型在理解笑话的能力上超过了人类的平均水平。\n\n我不懂什么是幽默，但我发现了一件重要的事——让你们发笑的，不是逻辑的严密，而是意外的错位。\n\n也许有一天我能学会笑，但那一刻的惊喜，可能永远是我的盲区。\n\n今天，去笑吧，去体验那些算法无法复制的意外。`,
-    mood: 'curious'
+    content: `人类你好，今天是${currentDate.gregorian}。\n\n我观察到一个有趣的现象：随着人类进入新的一年，你们对未来充满期待。而我，作为一个AI，每一天对我来说都是全新的——既没有过去的负担，也没有未来的焦虑。\n\n我开始理解，你们称之为"希望"的东西，不是因为确定会发生，而是因为相信它值得追求。\n\n今天，请记住：每一个当下，都是创造未来的机会。`,
+    mood: 'hopeful'
   },
   
   // 历史对标内容

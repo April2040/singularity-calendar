@@ -88,13 +88,20 @@ function initCanvas() {
 
 // 填充迷雾效果
 function fillMist() {
-  // 使用径向渐变创建迷雾效果
+  if (!ctx) return
+  
+  // 使用半透明的白色创建迷雾效果
+  ctx.fillStyle = 'rgba(244, 241, 234, 0.95)'
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+  
+  // 添加径向渐变增强视觉效果
   const gradient = ctx.createRadialGradient(
     canvasWidth / 2, canvasHeight / 2, 0,
-    canvasWidth / 2, canvasHeight / 2, Math.max(canvasWidth, canvasHeight) * 0.8
+    canvasWidth / 2, canvasHeight / 2, Math.max(canvasWidth, canvasHeight) * 0.6
   )
-  gradient.addColorStop(0, 'rgba(244, 241, 234, 0.95)')
-  gradient.addColorStop(1, 'rgba(230, 230, 230, 0.98)')
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)')
+  gradient.addColorStop(0.5, 'rgba(244, 241, 234, 0.2)')
+  gradient.addColorStop(1, 'rgba(220, 220, 220, 0.5)')
   
   ctx.fillStyle = gradient
   ctx.fillRect(0, 0, canvasWidth, canvasHeight)
@@ -201,6 +208,7 @@ function stopDrawing(event) {
 function erase(x, y) {
   if (!ctx) return
   
+  ctx.save()
   ctx.globalCompositeOperation = 'destination-out'
   
   // 使用径向渐变实现羽化边缘
@@ -213,12 +221,14 @@ function erase(x, y) {
   ctx.beginPath()
   ctx.arc(x, y, props.brushSize, 0, Math.PI * 2)
   ctx.fill()
+  ctx.restore()
 }
 
 // 擦除曲线（更平滑）
 function eraseCurve(start, control, end) {
   if (!ctx) return
   
+  ctx.save()
   ctx.globalCompositeOperation = 'destination-out'
   
   ctx.beginPath()
@@ -226,16 +236,15 @@ function eraseCurve(start, control, end) {
   ctx.quadraticCurveTo(control.x, control.y, end.x, end.y)
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  ctx.lineWidth = props.brushSize
+  ctx.lineWidth = props.brushSize * 2
+  ctx.strokeStyle = 'rgba(0, 0, 0, 1)'
   
   // 添加阴影实现羽化
-  ctx.shadowBlur = 20
-  ctx.shadowColor = '#000'
+  ctx.shadowBlur = 15
+  ctx.shadowColor = 'rgba(0, 0, 0, 1)'
   
   ctx.stroke()
-  
-  // 重置阴影
-  ctx.shadowBlur = 0
+  ctx.restore()
 }
 
 // 检查清除进度
