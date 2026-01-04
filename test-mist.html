@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>迷雾效果测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: linear-gradient(135deg, #F4F1EA 0%, #E8E4DA 100%);
+      font-family: 'Noto Serif SC', serif;
+    }
+    
+    .content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      padding: 40px;
+    }
+    
+    .content h1 {
+      font-size: 48px;
+      color: #1F1F1F;
+      margin-bottom: 20px;
+      font-family: 'Ma Shan Zheng', cursive;
+    }
+    
+    .content p {
+      font-size: 24px;
+      color: #575757;
+      line-height: 1.8;
+    }
+    
+    #mistCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      z-index: 10;
+    }
+    
+    .hint {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 24px 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      font-size: 18px;
+      color: #575757;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    
+    .hint.hidden {
+      opacity: 0;
+    }
+    
+    .progress {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(185, 28, 28, 0.9);
+      color: white;
+      padding: 8px 24px;
+      border-radius: 24px;
+      font-size: 24px;
+      z-index: 20;
+      pointer-events: none;
+      display: none;
+    }
+    
+    .progress.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <h1>奇点历</h1>
+    <p>2026年1月4日 星期六</p>
+    <p style="margin-top: 20px; font-size: 18px;">这是被迷雾遮挡的内容</p>
+  </div>
+  
+  <div class="hint" id="hint">
+    👆 滑动拨开迷雾
+  </div>
+  
+  <div class="progress" id="progress">0%</div>
+  
+  <canvas id="mistCanvas"></canvas>
+  
+  <script>
+    const canvas = document.getElementById('mistCanvas');
+    const ctx = canvas.getContext('2d');
+    const hint = document.getElementById('hint');
+    const progress = document.getElementById('progress');
+    
+    let isDrawing = false;
+    let lastPoint = null;
+    let clearProgress = 0;
+    
+    // 设置canvas尺寸
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.scale(dpr, dpr);
+      fillMist();
+    }
+    
+    // 填充迷雾
+    function fillMist() {
+      // 基础迷雾层
+      ctx.fillStyle = 'rgba(244, 241, 234, 0.95)';
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+      
+      // 径向渐变
+      const gradient = ctx.createRadialGradient(
+        window.innerWidth / 2, window.innerHeight / 2, 0,
+        window.innerWidth / 2, window.innerHeight / 2, 
+        Math.max(window.innerWidth, window.innerHeight) * 0.6
+      );
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+      gradient.addColorStop(0.5, 'rgba(244, 241, 234, 0.2)');
+      gradient.addColorStop(1, 'rgba(220, 220, 220, 0.5)');
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    }
+    
+    // 获取坐标
+    function getCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      }
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+    
+    // 擦除
+    function erase(x, y) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, 60);
+      gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+      gradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.8)');
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, 60, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    // 擦除曲线
+    function eraseCurve(start, end) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 120;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = 'rgba(0, 0, 0, 1)';
+      ctx.stroke();
+      ctx.restore();
+    }
+    
+    // 检查进度
+    function checkProgress() {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      let transparent = 0;
+      let total = 0;
+      
+      for (let i = 3; i < data.length; i += 40) {
+        if (data[i] < 128) transparent++;
+        total++;
+      }
+      
+      clearProgress = Math.round((transparent / total) * 100);
+      progress.textContent = clearProgress + '%';
+      
+      if (clearProgress > 0) {
+        progress.classList.add('show');
+      }
+      
+      if (clearProgress >= 60) {
+        complete();
+      }
+    }
+    
+    // 完成
+    function complete() {
+      canvas.style.opacity = '0';
+      canvas.style.transform = 'scale(1.1)';
+      setTimeout(() => {
+        canvas.style.display = 'none';
+        progress.style.display = 'none';
+      }, 800);
+    }
+    
+    // 事件处理
+    function startDrawing(e) {
+      e.preventDefault();
+      isDrawing = true;
+      hint.classList.add('hidden');
+      const point = getCoords(e);
+      lastPoint = point;
+      erase(point.x, point.y);
+    }
+    
+    function drawing(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const point = getCoords(e);
+      if (lastPoint) {
+        eraseCurve(lastPoint, point);
+      }
+      lastPoint = point;
+      checkProgress();
+    }
+    
+    function stopDrawing() {
+      if (!isDrawing) return;
+      isDrawing = false;
+      lastPoint = null;
+      checkProgress();
+    }
+    
+    // 绑定事件
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', drawing);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+    
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', drawing);
+    canvas.addEventListener('touchend', stopDrawing);
+    canvas.addEventListener('touchcancel', stopDrawing);
+    
+    window.addEventListener('resize', resizeCanvas);
+    
+    // 初始化
+    resizeCanvas();
+  </script>
+</body>
+</html>

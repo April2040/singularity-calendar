@@ -3,7 +3,7 @@
  */
 
 // 阿里云ECS服务器地址（部署后修改为实际地址）
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
 // API端点
 export const API_ENDPOINTS = {
