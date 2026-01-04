@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
-  base: './',  // 相对路径，支持GitHub Pages项目站点
+  base: '/singularity-calendar/',  // GitHub Pages子路径
   plugins: [vue()],
   resolve: {
     alias: {
