@@ -40,6 +40,12 @@ function handleLoadingComplete() {
   initializeData()
 }
 
+// 组件挂载时开始加载
+onMounted(() => {
+  // 延迟一小段时间显示loading动画效果
+  setTimeout(handleLoadingComplete, 800)
+})
+
 // 迷雾拨开完成
 function handleMistComplete() {
   stage.value = 'content'

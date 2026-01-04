@@ -5,6 +5,7 @@
 
 import { ref, computed } from 'vue'
 import { getTodayData, getHistoryBenchmark } from './api'
+import { generateTodayData } from '@/data/mockData'
 
 // 单例模式
 let dataManagerInstance = null
@@ -60,8 +61,9 @@ export function createDataManager() {
         console.log('使用API数据')
       } else {
         // 回退到本地数据
+        todayData.value = generateTodayData(date)
         dataSource.value = 'local'
-        console.log('使用本地数据')
+        console.log('使用本地mock数据')
       }
       
       lastUpdated.value = new Date()
@@ -70,8 +72,10 @@ export function createDataManager() {
     } catch (err) {
       console.error('加载数据失败:', err)
       error.value = err.message
+      // 确保返回本地数据
+      todayData.value = generateTodayData(date)
       dataSource.value = 'local'
-      return null
+      return todayData.value
       
     } finally {
       isLoading.value = false

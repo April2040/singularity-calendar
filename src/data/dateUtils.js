@@ -56,7 +56,7 @@ export function getLunarDate(date) {
   const lunarYear = 1900 + Math.floor(diffDays / 365.2425)
   const dayOfYear = diffDays % 365
   const lunarMonthIndex = Math.floor(dayOfYear / 30) % 12
-  const lunarDayIndex = dayOfDay % 30
+  const lunarDayIndex = dayOfYear % 30
   
   return {
     year: lunarYear,
